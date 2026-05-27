@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoFlow AI — Automatización Inteligente con n8n</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a08;
+    --surface: #111110;
+    --border: #2a2a26;
+    --accent: #c8f04a;
+    --accent2: #f04a4a;
+    --accent3: #4af0c8;
+    --text: #e8e6df;
+    --muted: #7a7870;
+    --card: #161614;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* CURSOR */
+  .cursor {
+    position: fixed;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%,-50%);
+    transition: width .15s, height .15s, background .15s;
+    mix-blend-mode: exclusion;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%,-50%);
+    transition: all .12s ease;
+    opacity: .5;
+  }
+  body:hover .cursor { opacity: 1; }
+
+  /* GRAIN OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9997;
+    opacity: .4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid transparent;
+    transition: border-color .3s, background .3s;
+  }
+  nav.scrolled {
+    background: rgba(10,10,8,.92);
+    backdrop-filter: blur(12px);
+    border-color: var(--border);
+  }
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: -.02em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--accent); }
+  .nav-links {
+    display: flex;
+    gap: 36px;
+    list-style: none;
+  }
+  .nav-links a {
+    font-size: .75rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-cta {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: .8rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 10px 22px;
+    border: none;
+    cursor: none;
+    text-decoration: none;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .nav-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(200,240,74,.25);
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 120px 80px 80px;
+    gap: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(200,240,74,.08) 0%, transparent 70%);
+    right: -100px; top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .7rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 28px;
+  }
+  .hero-tag::before {
+    content: '';
+    width: 24px; height: 1px;
+    background: var(--accent);
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(3rem, 5.5vw, 5.5rem);
+    line-height: .95;
+    letter-spacing: -.04em;
+    margin-bottom: 28px;
+    color: var(--text);
+  }
+  .hero-title .line-italic {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .hero-title .line-stroke {
+    -webkit-text-stroke: 1px var(--text);
+    color: transparent;
+  }
+
+  .hero-desc {
+    font-size: .9rem;
+    line-height: 1.8;
+    color: var(--muted);
+    max-width: 440px;
+    margin-bottom: 44px;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .btn-primary {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: .9rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 16px 36px;
+    border: none;
+    cursor: none;
+    text-decoration: none;
+    transition: transform .2s, box-shadow .2s;
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.15);
+    transform: translateX(-100%);
+    transition: transform .3s;
+  }
+  .btn-primary:hover::after { transform: translateX(0); }
+  .btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(200,240,74,.3);
+  }
+
+  .btn-ghost {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: .85rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: transparent;
+    padding: 15px 28px;
+    border: 1px solid var(--border);
+    cursor: none;
+    text-decoration: none;
+    transition: border-color .2s, color .2s;
+    display: inline-block;
+  }
+  .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* HERO VISUAL */
+  .hero-visual {
+    position: relative;
+  }
+
+  .flow-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    position: relative;
+    animation: float 4s ease-in-out infinite;
+  }
+  .flow-card:nth-child(2) { animation-delay: .5s; }
+  .flow-card:nth-child(3) { animation-delay: 1s; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .flow-main {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 32px;
+    position: relative;
+    z-index: 2;
+  }
+  .flow-label {
+    font-size: .65rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .flow-nodes {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    font-size: .72rem;
+    color: var(--text);
+    transition: border-color .2s;
+  }
+  .node:hover { border-color: var(--accent); }
+  .node-icon {
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+  }
+  .node-arrow {
+    color: var(--muted);
+    font-size: .8rem;
+    padding: 0 2px;
+  }
+
+  .flow-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    margin-top: 20px;
+  }
+  .stat-item {
+    background: var(--card);
+    padding: 16px;
+  }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+    color: var(--accent);
+    letter-spacing: -.04em;
+  }
+  .stat-desc {
+    font-size: .65rem;
+    color: var(--muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .floating-badge {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    padding: 10px 16px;
+    font-size: .7rem;
+    color: var(--accent);
+    letter-spacing: .08em;
+  }
+  .badge-1 { top: -16px; right: 24px; animation: float 3.5s ease-in-out infinite; }
+  .badge-2 { bottom: -16px; left: 24px; animation: float 4.2s ease-in-out infinite .8s; }
+
+  /* MARQUEE */
+  .marquee-section {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 0;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .marquee-track {
+    display: flex;
+    gap: 48px;
+    animation: marquee 20s linear infinite;
+    white-space: nowrap;
+  }
+  .marquee-item {
+    font-size: .7rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .marquee-item span { color: var(--accent); }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* SECTION BASE */
+  section { padding: 120px 80px; }
+
+  .section-eyebrow {
+    font-size: .68rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-eyebrow::before {
+    content: '';
+    width: 32px; height: 1px;
+    background: var(--accent);
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.4rem, 4vw, 4rem);
+    line-height: 1;
+    letter-spacing: -.04em;
+    margin-bottom: 20px;
+  }
+  .section-title em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  /* WHAT I DO */
+  .services {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .services-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: end;
+    margin-bottom: 80px;
+  }
+  .services-intro {
+    font-size: .9rem;
+    line-height: 1.9;
+    color: var(--muted);
+    max-width: 400px;
+  }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+  .service-item {
+    background: var(--card);
+    padding: 40px 36px;
+    position: relative;
+    overflow: hidden;
+    transition: background .3s;
+  }
+  .service-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .4s cubic-bezier(.23,1,.32,1);
+  }
+  .service-item:hover::before { transform: scaleX(1); }
+  .service-item:hover { background: var(--surface); }
+
+  .service-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 3rem;
+    color: var(--border);
+    line-height: 1;
+    margin-bottom: 24px;
+    transition: color .3s;
+  }
+  .service-item:hover .service-num { color: var(--accent); opacity: .3; }
+
+  .service-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+    margin-bottom: 16px;
+    letter-spacing: -.02em;
+  }
+  .service-desc {
+    font-size: .8rem;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+  .service-tags {
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tag {
+    font-size: .6rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(200,240,74,.3);
+    padding: 4px 10px;
+  }
+
+  /* PROCESO */
+  .process { background: var(--bg); }
+  .process-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 80px;
+    align-items: start;
+  }
+  .process-sticky {
+    position: sticky;
+    top: 120px;
+  }
+  .process-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+  }
+  .step {
+    background: var(--card);
+    padding: 36px 40px;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 24px;
+    align-items: start;
+    position: relative;
+    overflow: hidden;
+    transition: background .2s;
+  }
+  .step::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform .4s;
+  }
+  .step:hover::after { transform: scaleY(1); }
+  .step:hover { background: var(--surface); }
+
+  .step-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--accent);
+    opacity: .6;
+  }
+  .step-content {}
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: -.01em;
+  }
+  .step-desc {
+    font-size: .8rem;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+
+  /* CASE STUDY / DEMO */
+  .demo { background: var(--surface); border-top: 1px solid var(--border); }
+  .demo-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+  .demo-visual {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 32px;
+    font-family: 'DM Mono', monospace;
+    font-size: .78rem;
+    line-height: 1.8;
+    position: relative;
+    overflow: hidden;
+  }
+  .demo-visual::before {
+    content: 'LIVE FLOW';
+    position: absolute;
+    top: 16px; right: 16px;
+    font-size: .6rem;
+    letter-spacing: .2em;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .demo-header {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #f04a4a; }
+  .dot-y { background: #f0c84a; }
+  .dot-g { background: var(--accent); }
+
+  .code-line { padding: 2px 0; }
+  .code-comment { color: var(--muted); }
+  .code-key { color: var(--accent3); }
+  .code-val { color: var(--accent); }
+  .code-str { color: #f0c84a; }
+  .code-node { color: var(--accent2); }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 8px; height: 14px;
+    background: var(--accent);
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .demo-info {}
+  .demo-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2.4rem;
+    letter-spacing: -.04em;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+  .demo-name em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .demo-desc {
+    font-size: .85rem;
+    line-height: 1.9;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+  .demo-features {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  .demo-feat {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: .82rem;
+    color: var(--text);
+  }
+  .feat-icon {
+    width: 28px; height: 28px;
+    background: rgba(200,240,74,.1);
+    border: 1px solid rgba(200,240,74,.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    flex-shrink: 0;
+  }
+
+  /* PRICING */
+  .pricing { background: var(--bg); }
+  .pricing-header {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto 80px;
+  }
+  .pricing-header .section-eyebrow { justify-content: center; }
+  .pricing-header .section-eyebrow::before { display: none; }
+  .pricing-header p {
+    font-size: .85rem;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .plan {
+    background: var(--card);
+    padding: 48px 40px;
+    position: relative;
+    overflow: hidden;
+    transition: background .3s;
+  }
+  .plan:hover { background: var(--surface); }
+  .plan.featured {
+    background: var(--accent);
+  }
+  .plan.featured:hover { background: #d4f55a; }
+
+  .plan-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: .9rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .plan.featured .plan-name { color: rgba(10,10,8,.6); }
+
+  .plan-price {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 3.2rem;
+    letter-spacing: -.06em;
+    line-height: 1;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .plan.featured .plan-price { color: var(--bg); }
+  .plan-price sup { font-size: 1.4rem; vertical-align: top; margin-top: .6rem; }
+  .plan-price .period { font-size: 1rem; letter-spacing: 0; opacity: .5; }
+  .plan-subtitle {
+    font-size: .75rem;
+    color: var(--muted);
+    margin-bottom: 36px;
+    line-height: 1.6;
+  }
+  .plan.featured .plan-subtitle { color: rgba(10,10,8,.55); }
+
+  .plan-divider {
+    height: 1px;
+    background: var(--border);
+    margin-bottom: 28px;
+  }
+  .plan.featured .plan-divider { background: rgba(10,10,8,.2); }
+
+  .plan-features {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+  .plan-features li {
+    font-size: .78rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.5;
+  }
+  .plan.featured .plan-features li { color: rgba(10,10,8,.65); }
+  .plan-features li::before {
+    content: '→';
+    color: var(--accent);
+    font-size: .7rem;
+    flex-shrink: 0;
+  }
+  .plan.featured .plan-features li::before { color: var(--bg); }
+
+  .plan-btn {
+    display: block;
+    text-align: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: .8rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 14px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+    transition: all .2s;
+    cursor: none;
+  }
+  .plan-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .plan.featured .plan-btn {
+    background: var(--bg);
+    border-color: var(--bg);
+    color: var(--accent);
+  }
+  .plan.featured .plan-btn:hover {
+    background: transparent;
+    border-color: var(--bg);
+    color: var(--bg);
+  }
+  .plan-badge {
+    position: absolute;
+    top: 24px; right: -28px;
+    background: var(--bg);
+    color: var(--accent);
+    font-size: .6rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    padding: 6px 36px;
+    transform: rotate(45deg);
+  }
+
+  /* TESTIMONIOS */
+  .testimonials { background: var(--surface); border-top: 1px solid var(--border); }
+  .testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin-top: 60px;
+  }
+  .testimonial {
+    background: var(--card);
+    padding: 40px 36px;
+    transition: background .2s;
+  }
+  .testimonial:hover { background: var(--surface); }
+  .testimonial-quote {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--text);
+    margin-bottom: 28px;
+    position: relative;
+    padding-left: 20px;
+    border-left: 2px solid var(--accent);
+  }
+  .testimonial-author {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .author-avatar {
+    width: 36px; height: 36px;
+    background: var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .author-info {}
+  .author-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: .82rem;
+    color: var(--text);
+  }
+  .author-role {
+    font-size: .7rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* FAQ */
+  .faq { background: var(--bg); }
+  .faq-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 80px;
+  }
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+  }
+  .faq-item {
+    background: var(--card);
+  }
+  .faq-q {
+    padding: 24px 28px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: .88rem;
+    color: var(--text);
+    cursor: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    transition: color .2s;
+    user-select: none;
+  }
+  .faq-q:hover { color: var(--accent); }
+  .faq-toggle {
+    width: 24px; height: 24px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    color: var(--muted);
+    flex-shrink: 0;
+    transition: all .2s;
+  }
+  .faq-item.open .faq-toggle {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+    transform: rotate(45deg);
+  }
+  .faq-a {
+    padding: 0 28px;
+    font-size: .8rem;
+    line-height: 1.9;
+    color: var(--muted);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .4s cubic-bezier(.23,1,.32,1), padding .3s;
+  }
+  .faq-item.open .faq-a {
+    padding: 0 28px 24px;
+    max-height: 300px;
+  }
+
+  /* CTA FINAL */
+  .cta-section {
+    background: var(--accent);
+    padding: 100px 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: 'AUTOMATIZÁ';
+    position: absolute;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(6rem, 16vw, 18rem);
+    color: rgba(0,0,0,.06);
+    letter-spacing: -.05em;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .cta-tag {
+    font-size: .7rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: rgba(10,10,8,.5);
+    margin-bottom: 20px;
+  }
+  .cta-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.8rem, 5vw, 5rem);
+    color: var(--bg);
+    letter-spacing: -.04em;
+    line-height: 1;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .cta-title em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+  }
+  .cta-sub {
+    font-size: .9rem;
+    color: rgba(10,10,8,.6);
+    margin-bottom: 44px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.8;
+  }
+  .btn-dark {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: .9rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--bg);
+    padding: 18px 44px;
+    border: none;
+    cursor: none;
+    text-decoration: none;
+    display: inline-block;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .btn-dark:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(0,0,0,.3);
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 60px 80px 40px;
+  }
+  .footer-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 60px;
+    margin-bottom: 60px;
+  }
+  .footer-brand {}
+  .footer-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    letter-spacing: -.03em;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .footer-logo span { color: var(--accent); }
+  .footer-tagline {
+    font-size: .78rem;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 260px;
+  }
+  .footer-col-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: .75rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 20px;
+  }
+  .footer-links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .footer-links a {
+    font-size: .78rem;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .footer-links a:hover { color: var(--accent); }
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+  .footer-copy {
+    font-size: .7rem;
+    color: var(--muted);
+    letter-spacing: .08em;
+  }
+  .footer-made {
+    font-size: .7rem;
+    color: var(--muted);
+  }
+  .footer-made span { color: var(--accent); }
+
+  /* SCROLL ANIMATIONS */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity .7s cubic-bezier(.23,1,.32,1), transform .7s cubic-bezier(.23,1,.32,1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--accent); }
+
+  @media (max-width: 900px) {
+    nav { padding: 20px 24px; }
+    .nav-links { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; }
+    .hero-visual { display: none; }
+    section { padding: 80px 24px; }
+    .services-header { grid-template-columns: 1fr; }
+    .services-grid { grid-template-columns: 1fr; }
+    .process-grid { grid-template-columns: 1fr; }
+    .demo-wrapper { grid-template-columns: 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .testimonials-grid { grid-template-columns: 1fr; }
+    .faq-grid { grid-template-columns: 1fr; }
+    .cta-section { padding: 80px 24px; }
+    footer { padding: 60px 24px 32px; }
+    .footer-top { grid-template-columns: 1fr; gap: 40px; }
+    .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="#" class="nav-logo">Auto<span>Flow</span> AI</a>
+  <ul class="nav-links">
+    <li><a href="#servicios">Servicios</a></li>
+    <li><a href="#proceso">Proceso</a></li>
+    <li><a href="#precios">Precios</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <a href="#contacto" class="nav-cta">Hablemos →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="hero-tag">Automatización con IA + n8n</div>
+    <h1 class="hero-title">
+      Tu negocio<br>
+      <span class="line-italic">trabajando</span><br>
+      <span class="line-stroke">solo.</span>
+    </h1>
+    <p class="hero-desc">
+      Diseño e implemento flujos de automatización inteligentes con n8n y agentes de IA que eliminan tareas repetitivas, conectan tus herramientas y escalan tu operación sin contratar más gente.
+    </p>
+    <div class="hero-actions">
+      <a href="#contacto" class="btn-primary">Quiero automatizar →</a>
+      <a href="#servicios" class="btn-ghost">Ver servicios</a>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="floating-badge badge-1">⚡ n8n + Claude AI</div>
+    <div class="flow-main">
+      <div class="flow-label">// flujo activo — bookingbot.workflow</div>
+      <div class="flow-nodes">
+        <div class="node"><div class="node-icon" style="background:rgba(240,74,74,.2)">🔗</div>Webhook</div>
+        <span class="node-arrow">—</span>
+        <div class="node"><div class="node-icon" style="background:rgba(200,240,74,.2)">🤖</div>Agente IA</div>
+        <span class="node-arrow">—</span>
+        <div class="node"><div class="node-icon" style="background:rgba(74,240,200,.2)">📅</div>Calendar</div>
+        <br style="width:100%">
+      </div>
+      <div class="flow-nodes" style="margin-top:8px">
+        <div class="node"><div class="node-icon" style="background:rgba(240,200,74,.2)">💬</div>WhatsApp</div>
+        <span class="node-arrow">—</span>
+        <div class="node"><div class="node-icon" style="background:rgba(200,240,74,.2)">✉️</div>Email</div>
+        <span class="node-arrow">—</span>
+        <div class="node"><div class="node-icon" style="background:rgba(74,74,240,.2)">📊</div>CRM</div>
+      </div>
+      <div class="flow-stats">
+        <div class="stat-item">
+          <div class="stat-num">24/7</div>
+          <div class="stat-desc">Operación continua</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">0ms*</div>
+          <div class="stat-desc">Intervención humana</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">+80%</div>
+          <div class="stat-desc">Tiempo liberado</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">∞</div>
+          <div class="stat-desc">Escalabilidad</div>
+        </div>
+      </div>
+    </div>
+    <div class="floating-badge badge-2">✓ Turno agendado automáticamente</div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <div class="marquee-item">n8n <span>✦</span></div>
+    <div class="marquee-item">Agentes IA <span>✦</span></div>
+    <div class="marquee-item">WhatsApp Bot <span>✦</span></div>
+    <div class="marquee-item">Google Calendar <span>✦</span></div>
+    <div class="marquee-item">CRM Automation <span>✦</span></div>
+    <div class="marquee-item">Email Marketing <span>✦</span></div>
+    <div class="marquee-item">Claude AI <span>✦</span></div>
+    <div class="marquee-item">GPT-4 <span>✦</span></div>
+    <div class="marquee-item">Webhooks <span>✦</span></div>
+    <div class="marquee-item">APIs <span>✦</span></div>
+    <div class="marquee-item">n8n <span>✦</span></div>
+    <div class="marquee-item">Agentes IA <span>✦</span></div>
+    <div class="marquee-item">WhatsApp Bot <span>✦</span></div>
+    <div class="marquee-item">Google Calendar <span>✦</span></div>
+    <div class="marquee-item">CRM Automation <span>✦</span></div>
+    <div class="marquee-item">Email Marketing <span>✦</span></div>
+    <div class="marquee-item">Claude AI <span>✦</span></div>
+    <div class="marquee-item">GPT-4 <span>✦</span></div>
+    <div class="marquee-item">Webhooks <span>✦</span></div>
+    <div class="marquee-item">APIs <span>✦</span></div>
+  </div>
+</div>
+
+<!-- SERVICIOS -->
+<section class="services" id="servicios">
+  <div class="services-header reveal">
+    <div>
+      <div class="section-eyebrow">Servicios</div>
+      <h2 class="section-title">Lo que <em>construyo</em><br>para vos</h2>
+    </div>
+    <p class="services-intro">
+      Cada proyecto es único. Analizo tus procesos, identifico los cuellos de botella y diseño automatizaciones que realmente funcionan — no soluciones genéricas de plantilla.
+    </p>
+  </div>
+
+  <div class="services-grid">
+    <div class="service-item reveal">
+      <div class="service-num">01</div>
+      <h3 class="service-name">Agentes de IA Conversacionales</h3>
+      <p class="service-desc">Bots inteligentes que atienden clientes, responden consultas, califican leads y agendan turnos por WhatsApp, Telegram o web — las 24 horas.</p>
+      <div class="service-tags">
+        <span class="tag">Claude AI</span>
+        <span class="tag">GPT-4</span>
+        <span class="tag">WhatsApp</span>
+        <span class="tag">n8n</span>
+      </div>
+    </div>
+
+    <div class="service-item reveal">
+      <div class="service-num">02</div>
+      <h3 class="service-name">Automatización de Procesos</h3>
+      <p class="service-desc">Conectamos tus herramientas favoritas: CRM, email, facturación, Google Workspace, Notion, Airtable y más. Flujos que corren solos sin que toques nada.</p>
+      <div class="service-tags">
+        <span class="tag">Zapier-killer</span>
+        <span class="tag">APIs</span>
+        <span class="tag">Google Sheets</span>
+        <span class="tag">Airtable</span>
+      </div>
+    </div>
+
+    <div class="service-item reveal">
+      <div class="service-num">03</div>
+      <h3 class="service-name">Sistemas de Agendamiento</h3>
+      <p class="service-desc">Como BookingBot: el cliente habla con un bot, elige su turno, confirma y queda en el calendario — sin secretaria, sin llamadas, sin fricción.</p>
+      <div class="service-tags">
+        <span class="tag">Google Calendar</span>
+        <span class="tag">Calendly-free</span>
+        <span class="tag">WhatsApp</span>
+      </div>
+    </div>
+
+    <div class="service-item reveal">
+      <div class="service-num">04</div>
+      <h3 class="service-name">Procesamiento de Documentos con IA</h3>
+      <p class="service-desc">Extraé información de facturas, contratos, emails o formularios automáticamente. La IA lee, clasifica y guarda los datos donde vos necesitás.</p>
+      <div class="service-tags">
+        <span class="tag">OCR</span>
+        <span class="tag">LLM</span>
+        <span class="tag">Drive</span>
+        <span class="tag">Notion</span>
+      </div>
+    </div>
+
+    <div class="service-item reveal">
+      <div class="service-num">05</div>
+      <h3 class="service-name">Pipelines de Marketing Automatizado</h3>
+      <p class="service-desc">Nurturing de leads, seguimiento post-venta, emails personalizados con IA, reportes automáticos y alertas cuando algo necesita tu atención.</p>
+      <div class="service-tags">
+        <span class="tag">Email</span>
+        <span class="tag">Mailchimp</span>
+        <span class="tag">HubSpot</span>
+        <span class="tag">IA generativa</span>
+      </div>
+    </div>
+
+    <div class="service-item reveal">
+      <div class="service-num">06</div>
+      <h3 class="service-name">Consultoría & Estrategia de IA</h3>
+      <p class="service-desc">No sabés por dónde empezar. Hacemos un diagnóstico de tu negocio, priorizamos los flujos con mayor impacto y diseñamos la hoja de ruta juntos.</p>
+      <div class="service-tags">
+        <span class="tag">Diagnóstico</span>
+        <span class="tag">Roadmap</span>
+        <span class="tag">Capacitación</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESO -->
+<section class="process" id="proceso">
+  <div class="process-grid">
+    <div class="process-sticky">
+      <div class="section-eyebrow reveal">Proceso</div>
+      <h2 class="section-title reveal">Así <em>trabajo</em><br>con vos</h2>
+      <p class="reveal" style="font-size:.85rem;line-height:1.9;color:var(--muted);margin-top:20px;">
+        Sin reuniones interminables. Sin presupuestos opacos. Un proceso claro, resultados medibles.
+      </p>
+    </div>
+
+    <div class="process-steps">
+      <div class="step reveal">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <h3 class="step-title">Descubrimiento (gratis)</h3>
+          <p class="step-desc">30 minutos donde me contás cómo funciona tu negocio, qué tareas te consumen más tiempo y qué herramientas ya usás. Identificamos juntos las oportunidades de automatización de mayor impacto.</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <h3 class="step-title">Diagnóstico y Propuesta</h3>
+          <p class="step-desc">En 48hs recibís un documento con los flujos propuestos, las herramientas a usar, el tiempo estimado de ROI y el precio fijo del proyecto. Sin sorpresas.</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <h3 class="step-title">Desarrollo e Implementación</h3>
+          <p class="step-desc">Construyo los flujos en n8n, integro las IAs, conecto tus plataformas y hago pruebas exhaustivas con casos reales de tu negocio. Te muestro el avance en tiempo real.</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <h3 class="step-title">Entrega y Capacitación</h3>
+          <p class="step-desc">Entrego todo documentado, te enseño cómo monitorearlo y entiendo que tenés que poder manejarlo vos. No creo dependencias — te doy las herramientas para ser autónomo.</p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">05</div>
+        <div class="step-content">
+          <h3 class="step-title">Soporte Post-Entrega</h3>
+          <p class="step-desc">30 días de soporte incluido en todos los proyectos. Si algo falla o necesitás ajustes por cambios en tu negocio, estoy disponible para arreglarlo rápido.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO / CASO -->
+<section class="demo">
+  <div class="demo-wrapper">
+    <div class="demo-visual reveal">
+      <div class="demo-header">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+      </div>
+      <div class="code-line"><span class="code-comment">// BookingBot — Agente de Agendamiento</span></div>
+      <div class="code-line">&nbsp;</div>
+      <div class="code-line"><span class="code-key">workflow</span>: {</div>
+      <div class="code-line">&nbsp;&nbsp;<span class="code-key">trigger</span>: <span class="code-str">"WhatsApp message"</span>,</div>
+      <div class="code-line">&nbsp;&nbsp;<span class="code-node">agent</span>: <span class="code-str">"claude-sonnet-4"</span>,</div>
+      <div class="code-line">&nbsp;&nbsp;<span class="code-key">tools</span>: [</div>
+      <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-str">"consultar_disponibilidad"</span>,</div>
+      <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-str">"crear_turno"</span></div>
+      <div class="code-line">&nbsp;&nbsp;],</div>
+      <div class="code-line">&nbsp;&nbsp;<span class="code-key">memory</span>: <span class="code-val">contextual</span>,</div>
+      <div class="code-line">&nbsp;&nbsp;<span class="code-key">language</span>: <span class="code-str">"español rioplatense"</span></div>
+      <div class="code-line">}</div>
+      <div class="code-line">&nbsp;</div>
+      <div class="code-line"><span class="code-comment">// Output:</span></div>
+      <div class="code-line"><span class="code-val">✓</span> Turno agendado en Google Calendar</div>
+      <div class="code-line"><span class="code-val">✓</span> Cliente notificado por WhatsApp</div>
+      <div class="code-line"><span class="code-val">✓</span> Tiempo operador: <span class="code-node">0 minutos</span><span class="cursor-blink"></span></div>
+    </div>
+
+    <div class="demo-info reveal">
+      <div class="section-eyebrow">Caso Real</div>
+      <h2 class="demo-name">BookingBot:<br><em>agendamiento</em><br>autónomo</h2>
+      <p class="demo-desc">
+        Un cliente de servicios de salud necesitaba gestionar 50+ turnos diarios sin sumar personal. Le implementé un agente de IA que conversa por WhatsApp, consulta disponibilidad en Google Calendar y agenda automáticamente — en español rioplatense, 24/7.
+      </p>
+      <div class="demo-features">
+        <div class="demo-feat"><div class="feat-icon">💬</div>Conversación natural por WhatsApp e Instagram</div>
+        <div class="demo-feat"><div class="feat-icon">📅</div>Integración directa con Google Calendar</div>
+        <div class="demo-feat"><div class="feat-icon">🧠</div>Memoria de conversación por cliente</div>
+        <div class="demo-feat"><div class="feat-icon">⚡</div>Respuesta en menos de 3 segundos</div>
+        <div class="demo-feat"><div class="feat-icon">📊</div>Panel de administración incluido</div>
+      </div>
+      <a href="#contacto" class="btn-primary">Quiero algo similar →</a>
+    </div>
+  </div>
+</section>
+
+<!-- PRECIOS -->
+<section class="pricing" id="precios">
+  <div class="pricing-header reveal">
+    <div class="section-eyebrow">Inversión</div>
+    <h2 class="section-title">Precios <em>claros</em></h2>
+    <p>Sin costos ocultos. Sin tarifas por hora que se inflan. Proyecto cerrado con precio fijo desde el día uno.</p>
+  </div>
+
+  <div class="pricing-grid">
+    <div class="plan reveal">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price"><sup>$</sup>450<span class="period"> USD</span></div>
+      <p class="plan-subtitle">Un flujo de automatización simple. Ideal para empezar a automatizar.</p>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li>1 flujo de automatización</li>
+        <li>Hasta 3 integraciones</li>
+        <li>Sin agente de IA</li>
+        <li>Documentación completa</li>
+        <li>Soporte 30 días</li>
+        <li>Entrega en 5-7 días hábiles</li>
+      </ul>
+      <a href="#contacto" class="plan-btn">Consultar →</a>
+    </div>
+
+    <div class="plan featured reveal">
+      <div class="plan-badge">Popular</div>
+      <div class="plan-name">Growth</div>
+      <div class="plan-price"><sup>$</sup>950<span class="period"> USD</span></div>
+      <p class="plan-subtitle">Automatización con Agente de IA. El paquete más elegido por negocios en crecimiento.</p>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li>Agente de IA personalizado</li>
+        <li>Hasta 8 integraciones</li>
+        <li>WhatsApp / Telegram / Web</li>
+        <li>Memoria conversacional</li>
+        <li>Panel de monitoreo</li>
+        <li>Capacitación incluida</li>
+        <li>Soporte 30 días</li>
+        <li>Entrega en 10-14 días hábiles</li>
+      </ul>
+      <a href="#contacto" class="plan-btn">Quiero este →</a>
+    </div>
+
+    <div class="plan reveal">
+      <div class="plan-name">Scale</div>
+      <div class="plan-price" style="font-size:2rem">Custom</div>
+      <p class="plan-subtitle">Proyectos complejos con múltiples agentes, equipos o integraciones enterprise.</p>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li>Flujos ilimitados</li>
+        <li>Múltiples agentes de IA</li>
+        <li>Integraciones enterprise</li>
+        <li>Setup en tu servidor</li>
+        <li>SLA garantizado</li>
+        <li>Soporte mensual disponible</li>
+        <li>Retainer opcional</li>
+      </ul>
+      <a href="#contacto" class="plan-btn">Hablemos →</a>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIOS -->
+<section class="testimonials">
+  <div class="section-eyebrow reveal">Lo que dicen</div>
+  <h2 class="section-title reveal">Clientes <em>reales,</em><br>resultados medibles</h2>
+  <div class="testimonials-grid">
+    <div class="testimonial reveal">
+      <p class="testimonial-quote">"Pasé de responder 80 mensajes de WhatsApp por día a leer solo los casos especiales. El bot agenda, confirma y hasta manda recordatorios. Me cambió la vida."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">ML</div>
+        <div class="author-info">
+          <div class="author-name">María L.</div>
+          <div class="author-role">Centro de Estética, CABA</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial reveal">
+      <p class="testimonial-quote">"Tenía miedo de que sonara robótico, pero el agente habla exactamente como nosotros. Los clientes ni se dan cuenta que es una IA. La automatización del CRM nos ahorró 3 horas diarias."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">RG</div>
+        <div class="author-info">
+          <div class="author-name">Rodrigo G.</div>
+          <div class="author-role">Inmobiliaria, Rosario</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial reveal">
+      <p class="testimonial-quote">"El proceso de presupuestación que nos tomaba 2 horas ahora corre solo en 4 minutos. El ROI fue en el primer mes. Ojalá lo hubiera hecho antes."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">CF</div>
+        <div class="author-info">
+          <div class="author-name">Carolina F.</div>
+          <div class="author-role">Estudio Contable, Córdoba</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="faq-grid">
+    <div>
+      <div class="section-eyebrow reveal">FAQ</div>
+      <h2 class="section-title reveal">Preguntas<br><em>frecuentes</em></h2>
+      <p class="reveal" style="font-size:.82rem;line-height:1.9;color:var(--muted);margin-top:16px;">
+        Si no encontrás tu respuesta acá, escribime directamente.
+      </p>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFAQ(this)">¿Necesito saber programar para usar los flujos? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">No, para nada. Te entrego todo funcionando y te enseño a monitorear y ajustar desde la interfaz visual de n8n. No necesitás tocar una línea de código. Eso sí, si querés aprender, te explico todo.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFAQ(this)">¿Qué herramientas puedo conectar? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">n8n tiene más de 400 integraciones nativas: WhatsApp, Gmail, Google Sheets, Calendar, HubSpot, Salesforce, Slack, Notion, Airtable, Stripe, MercadoPago, y prácticamente cualquier servicio con API. Si usás algo específico, lo chequeamos juntos.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFAQ(this)">¿Dónde corren los flujos? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Tenés dos opciones: en la nube (n8n.io, desde ~$20/mes) o auto-hospedado en tu propio servidor para máximo control y privacidad. Te recomiendo la mejor opción según tu caso y presupuesto.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFAQ(this)">¿Qué pasa si algo se rompe? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Todos los proyectos incluyen 30 días de soporte post-entrega. Los flujos tienen manejo de errores integrado que te avisa si algo falla. Y si necesitás soporte continuo, tengo planes de retainer mensual.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFAQ(this)">¿Cuánto tiempo lleva implementar? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Un flujo simple puede estar listo en 3-5 días hábiles. Un agente de IA completo como BookingBot toma entre 10 y 14 días. Proyectos enterprise con múltiples integraciones pueden llevar 4-6 semanas. Te doy fecha de entrega exacta en la propuesta.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFAQ(this)">¿Los agentes de IA suenan naturales en español? <span class="faq-toggle">+</span></div>
+        <div class="faq-a">Sí. Configuro los agentes específicamente para hablar en el tono y estilo de tu negocio — argentino, formal, informal, lo que necesites. Los clientes muchas veces no notan que es una IA.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section" id="contacto">
+  <p class="cta-tag">¿Listo para automatizar?</p>
+  <h2 class="cta-title">Tu próxima hora <em>libre</em><br>empieza acá.</h2>
+  <p class="cta-sub">Contame qué proceso querés automatizar y en menos de 24hs te respondo con una propuesta concreta. La consulta inicial es gratuita.</p>
+  <a href="https://wa.me/5491100000000?text=Hola!%20Quiero%20automatizar%20mi%20negocio%20con%20IA%20y%20n8n" target="_blank" class="btn-dark">Escribime por WhatsApp →</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="footer-logo">Auto<span>Flow</span> AI</div>
+      <p class="footer-tagline">Automatización inteligente con n8n y agentes de IA para negocios en crecimiento.</p>
+    </div>
+    <div>
+      <div class="footer-col-title">Servicios</div>
+      <ul class="footer-links">
+        <li><a href="#servicios">Agentes de IA</a></li>
+        <li><a href="#servicios">Automatización de Procesos</a></li>
+        <li><a href="#servicios">Sistemas de Agendamiento</a></li>
+        <li><a href="#servicios">Documentos con IA</a></li>
+        <li><a href="#servicios">Consultoría</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Contacto</div>
+      <ul class="footer-links">
+        <li><a href="https://wa.me/5491100000000" target="_blank">WhatsApp</a></li>
+        <li><a href="mailto:hola@autoflowai.com">Email</a></li>
+        <li><a href="#" target="_blank">LinkedIn</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy">© 2025 AutoFlow AI. Todos los derechos reservados.</p>
+    <p class="footer-made">Hecho con <span>♥</span> + n8n + Claude AI en Argentina</p>
+  </div>
+</footer>
+
+<script>
+  // CURSOR
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mouseX = 0, mouseY = 0;
+  let ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    cursor.style.left = mouseX + 'px';
+    cursor.style.top = mouseY + 'px';
+  });
+
+  function animateRing() {
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    ring.style.left = ringX + 'px';
+    ring.style.top = ringY + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  document.querySelectorAll('a, button, .faq-q, [class*="btn"]').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.width = '18px';
+      cursor.style.height = '18px';
+      ring.style.width = '56px';
+      ring.style.height = '56px';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.width = '10px';
+      cursor.style.height = '10px';
+      ring.style.width = '36px';
+      ring.style.height = '36px';
+    });
+  });
+
+  // NAV SCROLL
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  // REVEAL
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), 60);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+
+  // FAQ
+  function toggleFAQ(el) {
+    const item = el.parentElement;
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // SMOOTH ANCHOR
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+</body>
+</html>
